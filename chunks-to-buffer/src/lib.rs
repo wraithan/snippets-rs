@@ -3,41 +3,54 @@ extern crate nom;
 
 use std::iter::Iterator;
 
-struct ChunkIterator {
-    first_chunk: Box<[u8]>,
-    second_chunk: Box<[u8]>,
+struct ChunkIterator<'a> {
+    chunks: Vec<&'a[u8]>,
     index: usize
 }
 
-impl Iterator for ChunkIterator {
+impl<'a> Iterator for ChunkIterator<'a> {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut result = None;
-        let first_len = self.first_chunk.len();
-
-        if self.index < first_len {
-            result = Some(self.first_chunk[self.index]);
-            self.index += 1;
-        } else if (self.index-first_len) < self.second_chunk.len() {
-            result = Some(self.second_chunk[self.index-first_len]);
-            self.index += 1;
+        let mut offset = self.index;
+        for chunk in self.chunks.iter() {
+            let chunk_len = chunk.len();
+            if offset < chunk_len {
+                result = Some(chunk[offset]);
+                self.index += 1;
+                break;
+            }
+            offset -= offset;
         }
         result
     }
 }
 
-#[test]
-fn it_works() {
-    let chunk_a = Box::new([1, 2, 3]);
-    let chunk_b = Box::new([4, 5, 6]);
-    let iter = ChunkIterator{
-        first_chunk: chunk_a,
-        second_chunk: chunk_b,
-        index: 0
-    };
+impl<'a> ChunkIterator<'a> {
+    fn new() -> ChunkIterator<'a> {
+        ChunkIterator{
+            chunks: vec![],
+            index: 0
+        }
+    }
 
+    fn push(&mut self, chunk: &[u8]) {
+        self.chunks.push(chunk);
+    }
+}
+
+#[test]
+fn bichunk_works() {
+    let iter = ChunkIterator::New();
+    iter.push(&[1, 2, 3]);
+    iter.push(&[4, 5, 6]);
     for (i,n) in iter.enumerate() {
         assert_eq!(n as usize, i+1);
     }
+}
+
+#[test]
+fn nom_with_bichunk() {
+    
 }
